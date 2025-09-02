@@ -98,7 +98,7 @@ func handleAnalyze(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, finalURL, status, fetchErr)
 		return
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	pgData := &pageData{
 		InputURL:     raw,
@@ -419,12 +419,12 @@ func checkLink(ctx context.Context, client *http.Client, u *url.URL) bool {
 	req, _ := http.NewRequestWithContext(ctx, http.MethodHead, u.String(), nil)
 	resp, err := client.Do(req)
 	if err == nil && resp != nil && resp.StatusCode >= 200 && resp.StatusCode < 400 {
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		return true
 	}
 	// Retry with GET if HEAD failed or got 405/403
 	if resp != nil {
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		if resp.StatusCode != http.StatusMethodNotAllowed && resp.StatusCode != http.StatusForbidden {
 			// treat other non-2xx as bad
 			return false
@@ -435,7 +435,9 @@ func checkLink(ctx context.Context, client *http.Client, u *url.URL) bool {
 	if err2 != nil {
 		return false
 	}
-	defer resp2.Body.Close()
-	io.Copy(io.Discard, io.LimitReader(resp2.Body, 64<<10))
+	defer func() {
+		_ = resp2.Body.Close()
+	}()
+	_, _ = io.Copy(io.Discard, io.LimitReader(resp2.Body, 64<<10))
 	return resp2.StatusCode >= 200 && resp2.StatusCode < 400
 }
