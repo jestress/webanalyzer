@@ -42,6 +42,14 @@ Then open [http://localhost:8080](http://localhost:8080) in your browser.
 
 ---
 
+## Example Sites To Try
+
+- https://w3schools.com (Not-JS heavy, yields healthy results)
+- https://youtube.com (JS-heavy, headings might not be parsed)
+- https://google.com
+
+---
+
 ## File Structure
 
 ```
@@ -108,9 +116,3 @@ Then open [http://localhost:8080](http://localhost:8080) in your browser.
 - UI polish: filter/sort headings and links.
 
 ---
-
-## Example Sites To Try
-
-- https://w3schools.com (Not-JS heavy, yields healthy results)
-- https://youtube.com (JS-heavy, headings might not be parsed)
-- https://google.com
