@@ -162,7 +162,7 @@ func TestFetch_StatusAndRedirect(t *testing.T) {
 	// final 200 server
 	ok := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
-		w.Write([]byte("<!doctype html><title>OK</title>"))
+		_, _ = w.Write([]byte("<!doctype html><title>OK</title>"))
 	}))
 	t.Cleanup(ok.Close)
 
@@ -177,7 +177,7 @@ func TestFetch_StatusAndRedirect(t *testing.T) {
 	if err != nil {
 		t.Fatalf("fetch error: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != 200 {
 		t.Fatalf("expected final status 200, got %d", resp.StatusCode)
