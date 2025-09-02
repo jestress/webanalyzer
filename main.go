@@ -105,6 +105,8 @@ func handleAnalyze(w http.ResponseWriter, r *http.Request) {
 		CanonicalURL: finalURL,
 		HTTPStatus:   status,
 		Result:       nil,
+		PerRequestTO: int(perRequestTimeout.Seconds()),
+		Budget:       int(totalAnalyzeBudget.Seconds()),
 	}
 	res, err := analyze(ctx, url, body)
 	if err != nil {
