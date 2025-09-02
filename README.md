@@ -1,5 +1,9 @@
 # Webpage Analyzer (Go)
 
+[![Go Build & Test](https://github.com/jestress/webanalyzer/actions/workflows/build.yaml/badge.svg)](https://github.com/jestress/webanalyzer/actions/workflows/build.yaml)
+
+[![Go Lint](https://github.com/jestress/webanalyzer/actions/workflows/lint.yaml/badge.svg)](https://github.com/jestress/webanalyzer/actions/workflows/lint.yaml)
+
 This project implements a small web application in **Go** that analyzes a given web page URL.  
 It was developed as a coding task and demonstrates HTML parsing, concurrent link checking, and server-side rendering.
 
