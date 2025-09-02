@@ -114,5 +114,3 @@ Then open [http://localhost:8080](http://localhost:8080) in your browser.
 - Export results as JSON/CSV.
 - Add unit tests for parsers and utilities.
 - UI polish: filter/sort headings and links.
-
----
