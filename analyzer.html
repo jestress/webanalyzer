@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Webpage Analyzer</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;max-width:900px;margin:2rem auto;padding:0 1rem;color:#111}
+header{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem}
+h1{font-size:1.6rem;margin:0}
+form{display:flex;gap:.5rem;margin:1rem 0}
+input[type=url]{flex:1;padding:.6rem;border:1px solid #ccc;border-radius:.5rem}
+button{padding:.6rem 1rem;border:0;background:#111;color:#fff;border-radius:.5rem;cursor:pointer}
+button:disabled{opacity:.6;cursor:not-allowed}
+.card{border:1px solid #e5e7eb;border-radius:.75rem;padding:1rem;margin:.75rem 0}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+small{color:#6b7280}
+code{background:#f3f4f6;padding:.1rem .3rem;border-radius:.25rem}
+.bad{color:#b91c1c;font-weight:600}
+.good{color:#065f46;font-weight:600}
+.kv{display:grid;grid-template-columns:220px 1fr;gap:.5rem .75rem;align-items:center}
+footer{margin-top:2rem;color:#6b7280;font-size:.9rem}
+ul{margin:.4rem 0 .2rem 1.25rem}
+</style>
+</head>
+<body>
+<header>
+  <h1>Webpage Analyzer</h1>
+  <small>Golang • Home24 task</small>
+</header>
+
+<form method="POST" action="/analyze">
+  <input type="url" name="u" placeholder="https://example.com" value="{{ .InputURL }}" required>
+  <button type="submit">Analyze</button>
+</form>
+
+{{ if .Error }}
+<div class="card">
+  <h2>Error</h2>
+  <p><span class="bad">Failed to fetch:</span> <code>{{ .InputURL }}</code></p>
+  {{ if .HTTPStatus }}
+  <p>HTTP status: <strong>{{ .HTTPStatus }}</strong></p>
+  {{ end }}
+  <p>Description: {{ .Error }}</p>
+  <p><small>Tip: include the scheme (e.g., <code>https://</code>) and ensure the host is reachable.</small></p>
+</div>
+{{ end }}
+
+{{ if .Result }}
+<div class="card">
+  <h2>Summary</h2>
+  <div class="kv">
+    <div>Analyzed URL</div><div><code>{{ .CanonicalURL }}</code></div>
+    <div>HTTP status</div><div><strong>{{ .HTTPStatus }}</strong></div>
+    <div>HTML Version</div><div>{{ .Result.HTMLVersion }}</div>
+    <div>Page Title</div><div>{{ .Result.Title }}</div>
+    <div>Has Login Form?</div>
+    <div>{{ if .Result.HasLogin }}<span class="good">Yes</span>{{ else }}<span>No</span>{{ end }}</div>
+  </div>
+</div>
+
+<div class="grid">
+  <div class="card">
+    <h3>Headings</h3>
+    <ul>
+      <li>H1: <strong>{{ index .Result.Headings 1 }}</strong></li>
+      <li>H2: <strong>{{ index .Result.Headings 2 }}</strong></li>
+      <li>H3: <strong>{{ index .Result.Headings 3 }}</strong></li>
+      <li>H4: <strong>{{ index .Result.Headings 4 }}</strong></li>
+      <li>H5: <strong>{{ index .Result.Headings 5 }}</strong></li>
+      <li>H6: <strong>{{ index .Result.Headings 6 }}</strong></li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3>Links</h3>
+    <ul>
+      <li>Internal links: <strong>{{ .Result.InternalLinks }}</strong></li>
+      <li>External links: <strong>{{ .Result.ExternalLinks }}</strong></li>
+      <li>Inaccessible (checked): <strong class="{{ if .Result.InaccessibleLinks }}bad{{ end }}">{{ .Result.InaccessibleLinks }}</strong></li>
+      <li>Checked (cap {{ .Result.CheckedLinksCap }}) : <strong>{{ .Result.CheckedLinks }}</strong></li>
+    </ul>
+    <small>We cap link checks to avoid excessive outbound requests.</small>
+  </div>
+</div>
+{{ end }}
+
+<footer>
+  <div>Built with Go 1.24 • Timeout per link ~{{ .PerRequestTO }}s • Overall budget ~{{ .Budget }}s</div>
+</footer>
+</body>
+</html>
