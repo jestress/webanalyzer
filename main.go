@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
+	"github.com/jestress/webanalyzer/cache"
 )
 
 var pageTmpl *template.Template
@@ -126,6 +127,70 @@ func handleAnalyze(w http.ResponseWriter, r *http.Request) {
 	_ = pageTmpl.Execute(w, pgData)
 }
 
+// fetch retrieves the URL content with a timeout and returns the response and body.
+func fetch(ctx context.Context, u string) (*http.Response, []byte, error) {
+	ce, found := cache.CheckCache(u)
+	if found {
+		// Simulate a response for status code and final URL, and embed cached body
+		fmt.Printf("Cache hit for %s\n", u)
+		return &http.Response{
+			StatusCode: ce.Status,
+			Request:    &http.Request{URL: mustParseURL(ce.FinalURL)},
+			Body:       io.NopCloser(bytes.NewReader(ce.Body)), // <-- embed cached body here
+		}, ce.Body, ce.Err
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	client := &http.Client{
+		Transport: &http.Transport{
+			Proxy:              http.ProxyFromEnvironment,
+			MaxIdleConns:       20,
+			IdleConnTimeout:    30 * time.Second,
+			DisableCompression: false,
+			DialContext: (&net.Dialer{
+				Timeout:   5 * time.Second,
+				KeepAlive: 30 * time.Second,
+			}).DialContext,
+			TLSHandshakeTimeout: 5 * time.Second,
+		},
+		Timeout: perRequestTimeout,
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, nil, fmt.Errorf("request failed: %w", err)
+	}
+	finalURL := u
+	if resp.Request != nil && resp.Request.URL != nil {
+		finalURL = resp.Request.URL.String()
+	}
+	if resp.StatusCode < 200 || resp.StatusCode >= 400 {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 2<<20)) // 2MiB cap
+		resp.Body.Close()
+		return resp, body, fmt.Errorf("non-OK status: %d %s", resp.StatusCode, http.StatusText(resp.StatusCode))
+	}
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 4<<20)) // 4MiB cap for analysis
+	resp.Body.Close()
+	cache.AddToCache(u, &cache.CacheEntry{
+		Body:      body,
+		Timestamp: time.Now(),
+		Status:    resp.StatusCode,
+		Err:       err,
+		FinalURL:  finalURL,
+	})
+	return resp, body, nil
+}
+
+// Helper for mustParseURL
+func mustParseURL(u string) *url.URL {
+	parsed, _ := url.Parse(u)
+	return parsed
+}
+
 // writeErr renders the error page with the given input URL, status, and error message.
 func writeErr(w http.ResponseWriter, input string, status int, err error) {
 	_ = pageTmpl.Execute(w, pageData{
@@ -153,44 +218,6 @@ func normalizeURL(raw string) (*url.URL, error) {
 		return nil, errors.New("missing host")
 	}
 	return u, nil
-}
-
-// fetch retrieves the URL content with a timeout and returns the response and body.
-func fetch(ctx context.Context, u string) (*http.Response, []byte, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	client := &http.Client{
-		Transport: &http.Transport{
-			Proxy:              http.ProxyFromEnvironment,
-			MaxIdleConns:       20,
-			IdleConnTimeout:    30 * time.Second,
-			DisableCompression: false,
-			DialContext: (&net.Dialer{
-				Timeout:   5 * time.Second,
-				KeepAlive: 30 * time.Second,
-			}).DialContext,
-			TLSHandshakeTimeout: 5 * time.Second,
-		},
-		Timeout: perRequestTimeout,
-	}
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, nil, fmt.Errorf("request failed: %w", err)
-	}
-	if resp.StatusCode < 200 || resp.StatusCode >= 400 {
-		// We still read body for HTML version/title if possible, but return error to satisfy the requirement.
-		body, _ := io.ReadAll(io.LimitReader(resp.Body, 2<<20)) // 2MiB cap
-		return resp, body, fmt.Errorf("non-OK status: %d %s", resp.StatusCode, http.StatusText(resp.StatusCode))
-	}
-	body, err := io.ReadAll(io.LimitReader(resp.Body, 4<<20)) // 4MiB cap for analysis
-	if err != nil {
-		return resp, nil, fmt.Errorf("failed reading response body: %w", err)
-	}
-	return resp, body, nil
 }
 
 // countHeadings counts the number of headings (h1..h6 and ARIA role="heading") in the document.
