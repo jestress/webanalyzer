@@ -447,7 +447,7 @@ func checkLink(ctx context.Context, client *http.Client, u *url.URL) bool {
 	// Prefer HEAD, fallback to GET when HEAD not allowed
 	req, _ := http.NewRequestWithContext(ctx, http.MethodHead, u.String(), nil)
 	resp, err := client.Do(req)
-	if err == nil && resp != nil && resp.StatusCode >= 200 && resp.StatusCode < 400 {
+	if err == nil && resp != nil && resp.StatusCode >= http.StatusOK && resp.StatusCode < http.StatusBadRequest {
 		_ = resp.Body.Close()
 		return true
 	}
@@ -468,5 +468,5 @@ func checkLink(ctx context.Context, client *http.Client, u *url.URL) bool {
 		_ = resp2.Body.Close()
 	}()
 	_, _ = io.Copy(io.Discard, io.LimitReader(resp2.Body, 64<<10))
-	return resp2.StatusCode >= 200 && resp2.StatusCode < 400
+	return resp2.StatusCode >= http.StatusOK && resp2.StatusCode < http.StatusBadRequest
 }
