@@ -168,7 +168,7 @@ func fetch(ctx context.Context, u string) (*http.Response, []byte, error) {
 	if resp.Request != nil && resp.Request.URL != nil {
 		finalURL = resp.Request.URL.String()
 	}
-	if resp.StatusCode < 200 || resp.StatusCode >= 400 {
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusBadRequest {
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 2<<20)) // 2MiB cap
 		resp.Body.Close()
 		return resp, body, fmt.Errorf("non-OK status: %d %s", resp.StatusCode, http.StatusText(resp.StatusCode))
